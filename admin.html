@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>TECHORA Ranger Dashboard</title>
+<style>
+body{margin:0;background:#07111f;color:#e8f1fb;font:14px/1.5 system-ui,sans-serif;padding:16px}h1{font-size:18px;margin:0 0 10px}h2{font-size:15px;margin:20px 0 8px}
+input,button{font:inherit;padding:8px 10px;border-radius:8px;border:1px solid #2a4664;background:#0c1a2b;color:#e8f1fb}button{cursor:pointer;background:#17324e}
+table{width:100%;border-collapse:collapse;font-size:12px;display:block;overflow-x:auto}th,td{padding:7px 9px;border-bottom:1px solid #1d3550;text-align:left;white-space:nowrap}th{color:#91a7bf}
+.bad{color:#fb7185;font-weight:700}.ok{color:#34d399}a{color:#38bdf8}#st{color:#91a7bf;font-size:12px;margin-left:8px}
+</style></head><body>
+<h1>TECHORA Ranger Dashboard</h1>
+<input id="key" type="password" placeholder="Admin key"> <button id="go">Connect</button><span id="st"></span>
+<h2>🆘 SOS alerts</h2><div id="sos"></div>
+<h2>🧭 Registered trips</h2><div id="trips"></div>
+<h2>📍 Last known positions</h2><div id="last"></div>
+<script>
+const $=id=>document.getElementById(id);let timer;
+function table(el,heads,rows){const t=document.createElement('table'),h=t.insertRow();heads.forEach(x=>{const c=document.createElement('th');c.textContent=x;h.appendChild(c)});
+rows.forEach(r=>{const tr=t.insertRow();r.forEach(v=>{const td=tr.insertCell();if(v instanceof Node)td.appendChild(v);else td.textContent=v??''})});
+if(!rows.length){const tr=t.insertRow(),td=tr.insertCell();td.colSpan=heads.length;td.textContent='None'}el.replaceChildren(t)}
+function mapLink(lat,lon){if(lat==null)return'No GPS';const a=document.createElement('a');a.href=`https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=15/${lat}/${lon}`;a.target='_blank';a.rel='noreferrer';a.textContent=`${(+lat).toFixed(5)}, ${(+lon).toFixed(5)}`;return a}
+const when=t=>t?new Date(t).toLocaleString():'';
+async function load(){try{const r=await fetch('/api/admin/state',{headers:{'x-admin-key':$('key').value}});if(!r.ok)throw Error(r.status==401?'Wrong key':'HTTP '+r.status);const d=await r.json();
+table($('sos'),['Time','Name','Phone','Location','Status',''],d.sos.map(s=>{const b=document.createElement('button');b.textContent='Mark resolved';b.onclick=async()=>{await fetch('/api/admin/resolve',{method:'POST',headers:{'x-admin-key':$('key').value,'Content-Type':'application/json'},body:JSON.stringify({id:s.id})});load()};
+const st=document.createElement('span');st.className=s.resolved?'ok':'bad';st.textContent=s.resolved?'Resolved':'ACTIVE';return[when(s.t),s.name,s.phone,mapLink(s.lat,s.lon),st,s.resolved?'':b]}));
+table($('trips'),['Name','Phone','Area','Group','Return by','Status'],d.trips.map(t=>{const st=document.createElement('span');st.className=t.overdue?'bad':'ok';st.textContent=t.done?'Back safe':t.overdue?'OVERDUE':'On trip';return[t.name,t.phone,t.area,t.group,when(t.returnBy),st]}));
+table($('last'),['Name','Position','Seen'],d.last.map(l=>[l.name||l.deviceId.slice(0,8),mapLink(l.lat,l.lon),when(l.received)]));
+$('st').textContent='Updated '+new Date().toLocaleTimeString()}catch(e){$('st').textContent=e.message}}
+$('go').onclick=()=>{clearInterval(timer);load();timer=setInterval(load,15000)};
+</script></body></html>

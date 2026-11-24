@@ -1,0 +1,10 @@
+{
+  "name": "TECHORA Global Disaster Intelligence",
+  "short_name": "TECHORA",
+  "description": "Global weather and earthquake monitoring prototype",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#07111f",
+  "theme_color": "#07111f",
+  "icons": [{"src":"icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+}
